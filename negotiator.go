@@ -28,12 +28,12 @@ func GetDomain(user string) (string, string, bool) {
 	return user, domain, domainNeeded
 }
 
-//Negotiator is a http.Roundtripper decorator that automatically
-//converts basic authentication to NTLM/Negotiate authentication when appropriate.
+// Negotiator is a http.Roundtripper decorator that automatically
+// converts basic authentication to NTLM/Negotiate authentication when appropriate.
 type Negotiator struct{ http.RoundTripper }
 
-//RoundTrip sends the request to the server, handling any authentication
-//re-sends as needed.
+// RoundTrip sends the request to the server, handling any authentication
+// re-sends as needed.
 func (l Negotiator) RoundTrip(req *http.Request) (res *http.Response, err error) {
 	// Use default round tripper if not provided
 	rt := l.RoundTripper
@@ -111,7 +111,10 @@ func (l Negotiator) RoundTrip(req *http.Request) (res *http.Response, err error)
 			req.Header.Set("Authorization", "Negotiate "+base64.StdEncoding.EncodeToString(negotiateMessage))
 		}
 
-		req.Body = ioutil.NopCloser(bytes.NewReader(body.Bytes()))
+		// do not send body on challenge request
+		savedContentLength := req.ContentLength
+		req.Body = nil
+		req.ContentLength = 0
 
 		res, err = rt.RoundTrip(req)
 		if err != nil {
@@ -143,6 +146,7 @@ func (l Negotiator) RoundTrip(req *http.Request) (res *http.Response, err error)
 		}
 
 		req.Body = ioutil.NopCloser(bytes.NewReader(body.Bytes()))
+		req.ContentLength = savedContentLength
 
 		return rt.RoundTrip(req)
 	}
